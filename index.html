@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prayer Time Calendar Exporter</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <style>
+        /* --- Base Theme Styling --- */
+        :root[data-theme="dark"] {
+            --pico-background-color: #0f172a;
+            --pico-card-background-color: #1e293b;
+            --pico-form-element-background-color: #334155;
+            --pico-form-element-border-color: #475569;
+            --pico-primary: #3b82f6;
+            --pico-primary-border: #3b82f6;
+            --pico-primary-hover: #60a5fa;
+            --pico-primary-focus: #3b82f6;
+            --pico-bright-green: #34d399; 
+        }
+        
+        body {
+            background-color: var(--pico-background-color);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%231e293b' fill-opacity='1'%3E%3Cpath d='M20 0l3 8 8 3-8 3-3 8-3-8-8-3 8-3z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        article {
+            background-color: var(--pico-card-background-color);
+        }
+
+        /* --- Title Icon Styling --- */
+        .page-title {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
+        .page-title svg {
+            width: 28px;
+            height: 28px;
+            stroke-width: 1.5;
+            color: var(--pico-primary);
+        }
+
+        /* --- Theme Toggle Styling --- */
+        .theme-switcher {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .theme-switcher label {
+            margin: 0;
+            padding-left: 0.5rem;
+            color: var(--pico-muted-color);
+        }
+
+        /* --- Autocomplete Box Styling --- */
+        .form-group {
+            position: relative;
+        }
+        #city-suggestions-box {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--pico-card-background-color);
+            border: 1px solid var(--pico-form-element-border-color);
+            border-radius: var(--pico-border-radius);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .suggestion-item {
+            padding: 0.75rem;
+            cursor: pointer;
+        }
+        .suggestion-item:hover {
+            background: var(--pico-primary-background);
+        }
+        
+        #downloadButton {
+            display: none;
+            background-color: var(--pico-confirmation-color);
+        }
+        
+        /* NEW: Instructions Styling */
+        #instructions {
+            display: none;
+            margin-top: 1.5rem;
+            background: var(--pico-background-color);
+        }
+        #instructions summary {
+            font-weight: bold;
+        }
+        #instructions ul {
+            margin-bottom: 0.5rem;
+            padding-left: 1.25rem;
+        }
+
+        /* --- Calendar Preview Styling --- */
+        #calendar-preview {
+            margin-top: 2rem;
+            background: var(--pico-card-background-color);
+            padding: 1rem;
+            border-radius: var(--pico-border-radius);
+            overflow: hidden;
+        }
+        
+        .calendar-month h2 {
+            text-align: center;
+            font-size: 2.25rem;
+            border-bottom: 2px solid var(--pico-primary);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        /* --- Mobile & Tablet View: Vertical List --- */
+        .dow-header {
+            display: none;
+        }
+        .days-grid {
+            display: block;
+        }
+        .day-cell {
+            display: block;
+            padding: 1.25rem 0.5rem;
+            border-bottom: 1px solid var(--pico-form-element-border-color);
+        }
+        .day-cell.empty {
+            display: none;
+        }
+        .day-info {
+            font-weight: 700;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .day-num {
+            font-size: 1.5rem;
+            display: inline-block;
+            color: var(--pico-h6-color);
+            margin-right: 0.5rem;
+        }
+        .day-name {
+            font-size: 1.5rem;
+            display: inline-block;
+            color: var(--pico-muted-color);
+        }
+        .prayer-list {
+            margin: 0.5rem auto 0 auto;
+            padding-left: 0;
+            list-style: none;
+            font-size: 1rem;
+            line-height: 1.7;
+            width: fit-content;
+        }
+        .prayer-list li {
+            color: var(--pico-muted-color);
+            white-space: nowrap;
+        }
+        .prayer-list li strong {
+            color: var(--pico-color);
+            display: inline-block;
+            min-width: 70px;
+        }
+        
+        [data-theme="dark"] .prayer-list .prayer-time {
+            color: var(--pico-bright-green);
+        }
+        [data-theme="light"] .prayer-list .prayer-time {
+            color: var(--pico-color);
+        }
+
+
+        /* --- Desktop-only View (Wider Breakpoint) --- */
+        @media (min-width: 1024px) {
+            #calendar-preview {
+                padding: 1.5rem;
+            }
+            .dow-header {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                text-align: center;
+                font-weight: bold;
+                padding: 0.5rem 0;
+                color: var(--pico-muted-color);
+                border-bottom: 1px solid var(--pico-form-element-border-color);
+            }
+            .days-grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+            }
+            .day-cell {
+                display: block; 
+                position: relative;
+                border-bottom: 1px solid var(--pico-form-element-border-color);
+                border-right: 1px solid var(--pico-form-element-border-color);
+                height: 170px; 
+                padding: 1rem;
+                overflow: hidden; 
+            }
+            .day-cell:nth-child(7n+1) {
+                border-left: 1px solid var(--pico-form-element-border-color);
+            }
+            .day-cell.empty { 
+                display: block;
+                background: var(--pico-background-color);
+            }
+            .day-info {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                min-width: auto;
+                padding-right: 0;
+                text-align: right;
+            }
+            .day-num {
+                font-size: 1rem;
+                display: inline;
+                margin-right: 0;
+            }
+            .day-name {
+                display: none;
+            }
+            .prayer-list {
+                font-size: 0.8rem;
+                line-height: 1.5; 
+                margin: 0;
+                width: auto;
+            }
+            .prayer-list li {
+                white-space: normal;
+                overflow: visible;
+                text-overflow: clip; 
+            }
+            .prayer-list li strong {
+                min-width: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="container">
+        <article>
+            <div class="theme-switcher">
+                <input type="checkbox" id="theme-toggle" role="switch">
+                <label for="theme-toggle">Light Mode</label>
+            </div>
+
+            <h1 class="page-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                Salatie Calendar
+            </h1>
+
+            <form id="prayerForm">
+                <div class="form-group">
+                    <label for="location">Location (City, Country)</label>
+                    <input type="text" id="location" placeholder="e.g., Tokyo, Japan" required autocomplete="off">
+                    <div id="city-suggestions-box"></div>
+                </div>
+
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="startDate">Start Date</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End Date</label>
+                        <input type="date" id="endDate" required>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="method">Calculation Method</label>
+                        <select id="method" required>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="madhab">Asr Calculation</label>
+                        <select id="madhab" required>
+                            <option value="shafi" selected>Shafi</option>
+                            <option value="hanafi">Hanafi</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="duration">Prayer/Event Duration (mins)</label>
+                    <input type="number" id="duration" value="10" required>
+                </div>
+
+                <button type="submit" id="previewButton">Generate Preview</button>
+                <button type="button" id="downloadButton" style="display: none;">Download .ics Calendar</button>
+
+                <details id="instructions" style="display: none;">
+                    <summary>How to add the .ics file to your calendar</summary>
+                    <ul>
+                        <li><strong>Google Calendar:</strong> Go to Settings &gt; Add calendar &gt; Import &amp; export. Select the downloaded <code>salatie.ics</code> file.</li>
+                        <li><strong>Apple Calendar (Mac):</strong> Go to File &gt; Import... and select the <code>salatie.ics</code> file.</li>
+                        <li><strong>iPhone/iPad:</strong> Email the <code>.ics</code> file to yourself. Open the Mail app and tap the file to add the events.</li>
+                        <li><strong>Outlook:</strong> Go to File &gt; Open &amp; Export &gt; Import/Export &gt; Import an iCalendar (.ics).</li>
+                    </ul>
+                </details>
+
+                <div id="status"></div>
+            </form>
+        </article>
+
+        <div id="calendar-preview"></div>
+
+    </main>
+
+    <script type="module">
+        // Import the required libraries from a CDN
+        import { Coordinates, CalculationMethod, PrayerTimes } from 'https://cdn.jsdelivr.net/npm/adhan@4.4.3/lib/bundles/adhan.esm.js';
+        import * as ics from 'https://cdn.skypack.dev/ics';
+
+        // --- Global variable to store calculated data ---
+        let calculatedPrayerData = null;
+
+        // --- Get UI Elements ---
+        const locationInput = document.getElementById('location');
+        const suggestionsBox = document.getElementById('city-suggestions-box');
+        const prayerForm = document.getElementById('prayerForm');
+        const previewButton = document.getElementById('previewButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const statusEl = document.getElementById('status');
+        const previewDiv = document.getElementById('calendar-preview');
+        const methodSelect = document.getElementById('method');
+        const themeToggle = document.getElementById('theme-toggle');
+        const instructions = document.getElementById('instructions'); // NEW
+        
+        // --- 1. Theme Toggle Logic ---
+        const themeSwitcher = {
+            init() {
+                themeToggle.addEventListener('change', this.toggleTheme);
+                this.loadTheme();
+            },
+            toggleTheme(e) {
+                const theme = e.target.checked ? 'light' : 'dark';
+                themeSwitcher.setTheme(theme);
+            },
+            setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('pico-theme', theme);
+                themeToggle.checked = (theme === 'light');
+            },
+            loadTheme() {
+                const storedTheme = localStorage.getItem('pico-theme');
+                this.setTheme(storedTheme || 'dark');
+            }
+        };
+        themeSwitcher.init();
+        
+
+        // --- 2. Populate UI (Dropdowns & Dates) ---
+        const defaultMethods = {
+            'UmmAlQura': CalculationMethod.UmmAlQura(),
+            'MuslimWorldLeague': CalculationMethod.MuslimWorldLeague(),
+            'Egyptian': CalculationMethod.Egyptian(),
+            'MoonsightingCommittee': CalculationMethod.MoonsightingCommittee(),
+            'NorthAmerica': CalculationMethod.NorthAmerica(),
+            'Karachi': CalculationMethod.Karachi(),
+            'Dubai': CalculationMethod.Dubai(),
+            'Kuwait': CalculationMethod.Kuwait(),
+            'Qatar': CalculationMethod.Qatar(),
+            'Singapore': CalculationMethod.Singapore(),
+        };
+        for (const [name, method] of Object.entries(defaultMethods)) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            if (name === 'UmmAlQura') { option.selected = true; }
+            methodSelect.appendChild(option);
+        }
+        const today = new Date();
+        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        document.getElementById('startDate').value = today.toISOString().split('T')[0];
+        document.getElementById('endDate').value = nextMonth.toISOString().split('T')[0];
+
+
+        // --- 3. City Autocomplete Logic ---
+        let debounceTimer;
+        locationInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fetchCitySuggestions, 400);
+        });
+        async function fetchCitySuggestions() {
+            const query = locationInput.value;
+            if (query.length < 3) {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&dedupe=1&category=boundary:administrative,place:city,place:town`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                suggestionsBox.innerHTML = '';
+                
+                if (data.length > 0) {
+                    data.forEach(place => {
+                        const item = document.createElement('div');
+                        item.className = 'suggestion-item';
+                        item.textContent = place.display_name;
+                        item.onclick = () => {
+                            locationInput.value = place.display_name;
+                            suggestionsBox.style.display = 'none';
+                        };
+                        suggestionsBox.appendChild(item);
+                    });
+                    suggestionsBox.style.display = 'block';
+                } else {
+                    suggestionsBox.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error fetching city suggestions:', error);
+            }
+        }
+        document.addEventListener('click', (e) => {
+            if (!locationInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+                suggestionsBox.style.display = 'none';
+            }
+        });
+
+        // --- 4. Handle Form Submission (Generate Preview) ---
+        prayerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // NEW: Reset instructions visibility
+            previewButton.setAttribute('aria-busy', 'true');
+            previewButton.disabled = true;
+            downloadButton.style.display = 'none';
+            instructions.style.display = 'none'; // Hide instructions
+            previewDiv.innerHTML = '';
+            statusEl.textContent = 'Searching for location...';
+            calculatedPrayerData = null; 
+
+            const locationQuery = locationInput.value;
+            const startDate = new Date(document.getElementById('startDate').value + 'T00:00:00');
+            const endDate = new Date(document.getElementById('endDate').value + 'T00:00:00');
+            const methodName = document.getElementById('method').value;
+            const madhab = document.getElementById('madhab').value;
+            
+            try {
+                // --- Geocoding Step ---
+                const geoResponse = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationQuery)}&format=json&limit=1`);
+                if (!geoResponse.ok) throw new Error('Failed to reach location service.');
+                const geoData = await geoResponse.json();
+                if (geoData.length === 0) throw new Error(`Location not found: "${locationQuery}"`);
+
+                const locationResult = geoData[0];
+                const latitude = parseFloat(locationResult.lat);
+                const longitude = parseFloat(locationResult.lon);
+
+                statusEl.textContent = `Location found. Generating preview...`;
+
+                // --- Calculation Step ---
+                const params = defaultMethods[methodName];
+                params.madhab = madhab;
+                const coordinates = new Coordinates(latitude, longitude);
+                
+                const prayerData = {};
+                let currentDate = new Date(startDate);
+
+                while (currentDate <= endDate) {
+                    const prayerTimes = new PrayerTimes(coordinates, currentDate, params);
+                    const yyyymmdd = currentDate.toISOString().split('T')[0];
+                    prayerData[yyyymmdd] = {
+                        'Fajr': prayerTimes.fajr,
+                        'Dhuhr': prayerTimes.dhuhr,
+                        'Asr': prayerTimes.asr,
+                        'Maghrib': prayerTimes.maghrib,
+                        'Isha': prayerTimes.isha,
+                    };
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                
+                calculatedPrayerData = { data: prayerData, location: locationResult.display_name, lat: latitude, lon: longitude };
+
+                // --- Render Step ---
+                renderCalendarPreview(calculatedPrayerData, startDate, endDate);
+                
+                statusEl.textContent = 'Preview generated successfully.';
+                downloadButton.style.display = 'block';
+                instructions.style.display = 'block'; // NEW: Show instructions
+
+            } catch (error) {
+                console.error(error);
+                statusEl.style.color = 'var(--pico-del-color)';
+                statusEl.textContent = `Error: ${error.message}`;
+            } finally {
+                previewButton.setAttribute('aria-busy', 'false');
+                previewButton.disabled = false;
+            }
+        });
+
+        // --- 5. Responsive Calendar Render Function ---
+        function renderCalendarPreview(prayerData, startDate, endDate) {
+            let html = '';
+            let currentMonth = -1;
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const timeFormatter = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
+
+            for (let day = new Date(startDate); day <= endDate; day.setDate(day.getDate() + 1)) {
+                
+                if (day.getMonth() !== currentMonth) {
+                    if (currentMonth !== -1) {
+                        html += '</div></div>';
+                    }
+                    currentMonth = day.getMonth();
+                    
+                    html += `<div class="calendar-month">`;
+                    html += `<h2>${day.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>`;
+                    
+                    html += '<div class="dow-header">';
+                    daysOfWeek.forEach(dow => html += `<div>${dow}</div>`);
+                    html += '</div>';
+
+                    html += '<div class="days-grid">';
+
+                    const firstDayOffset = new Date(day.getFullYear(), day.getMonth(), 1).getDay();
+                    for (let i = 0; i < firstDayOffset; i++) {
+                        html += '<div class="day-cell empty"></div>';
+                    }
+                }
+
+                const yyyymmdd = day.toISOString().split('T')[0];
+                const times = prayerData.data[yyyymmdd];
+                
+                html += '<div class="day-cell">';
+                
+                const shortDayName = day.toLocaleDateString('en-US', { weekday: 'short' });
+                html += `<div class="day-info">
+                             <span class="day-num">${day.getDate()}</span>
+                             <span class="day-name">${shortDayName}</span>
+                         </div>`;
+                
+                if (times) {
+                    html += '<ul class="prayer-list">';
+                    for (const [name, time] of Object.entries(times)) {
+                        html += `<li><strong>${name}:</strong> <span class="prayer-time">${timeFormatter.format(time)}</span></li>`;
+                    }
+                    html += '</ul>';
+                }
+                html += '</div>';
+
+                const isLastDay = (day.getTime() === endDate.getTime());
+                if (isLastDay) {
+                    const lastDayOffset = day.getDay();
+                    for (let i = lastDayOffset + 1; i <= 6; i++) {
+                         html += '<div class="day-cell empty"></div>';
+                    }
+                }
+            }
+            
+            html += '</div></div>';
+            previewDiv.innerHTML = html;
+        }
+
+
+        // --- 6. Handle Download Button Click ---
+        downloadButton.addEventListener('click', () => {
+            if (!calculatedPrayerData) {
+                alert('Please generate a preview first.');
+                return;
+            }
+            
+            statusEl.textContent = 'Generating .ics file...';
+            const duration = parseInt(document.getElementById('duration').value, 10);
+            const calendarEvents = [];
+
+            for (const [yyyymmdd, times] of Object.entries(calculatedPrayerData.data)) {
+                for (const [name, time] of Object.entries(times)) {
+                    
+                    const startArray = [
+                        time.getFullYear(),
+                        time.getMonth() + 1,
+                        time.getDate(),
+                        time.getHours(),
+                        time.getMinutes()
+                    ];
+
+                    calendarEvents.push({
+                        title: name,
+                        start: startArray,
+                        duration: { minutes: duration },
+                        location: calculatedPrayerData.location,
+                        geo: { lat: calculatedPrayerData.lat, lon: calculatedPrayerData.lon },
+                    });
+                }
+            }
+            
+            ics.createEvents(calendarEvents, (error, value) => {
+                if (error) {
+                    console.error(error);
+                    statusEl.textContent = 'Error: ' + error.message;
+                    return;
+                }
+                
+                const filename = 'salatak.ics';
+                const file = new File([value], filename, { type: 'text/calendar' });
+                const url = URL.createObjectURL(file);
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = filename;
+                
+                document.body.appendChild(anchor);
+                anchor.click();
+                document.body.removeChild(anchor);
+                URL.revokeObjectURL(url);
+                
+                statusEl.textContent = `Success! ${calendarEvents.length} events exported.`;
+            });
+        });
+
+    </script>
+</body>
+</html>
