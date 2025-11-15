@@ -5,11 +5,8 @@ A simple, serverless web application for generating and exporting Islamic prayer
 This single-page app allows users to get accurate prayer times for any location, preview them in a responsive calendar, and download an `.ics` file to import into Google Calendar, Apple Calendar, Outlook, and more.
 
 ## 📸 Screenshots
-![Desktop View] (1.png)
-(2.png)
-
-![Mobile View]  (3.png)
-(4.png)
+![Desktop View](1.png) ![Desktop View 2](2.png)
+![Mobile View](3.png) ![Mobile View 2](4.png)
 
 
 ## ✨ Features
