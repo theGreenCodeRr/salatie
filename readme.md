@@ -1,6 +1,7 @@
 # Salatie Calendar
 
 A simple, serverless web application for generating and exporting Islamic prayer time calendars.
+Live link >>> salatie.quantumsofts.com
 
 This single-page app allows users to get accurate prayer times for any location, preview them in a responsive calendar, and download an `.ics` file to import into Google Calendar, Apple Calendar, Outlook, and more.
 
